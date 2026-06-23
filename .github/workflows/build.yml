@@ -1,22 +1,60 @@
-name: Build and Deploy Extension
+name: Build
+
+concurrency: 
+  group: "build"
+  cancel-in-progress: true
 
 on:
   push:
     branches:
-      - main
       - master
+      - main
+    paths-ignore:
+      - '*.md'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
-
-      - name: Build and Deploy CloudStream Repository
-        uses: recloudstream/extension-builder@master
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: "src"
+
+      - name: Checkout builds
+        uses: actions/checkout@v3
+        with:
+          ref: "builds"
+          path: "builds"
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Build Plugins
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          chmod +x gradlew
+          # Build plugins and generate JSON
+          ./gradlew make makePluginsJson
+          
+          # Copy everything directly into the builds branch folder
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/
+          # Copy and rename the JSON manifest
+          cp build/plugins.json $GITHUB_WORKSPACE/builds/CNCVerse.json
+
+      - name: Push builds
+        run: |
+          cd $GITHUB_WORKSPACE/builds
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "Automated build from $GITHUB_SHA" || exit 0
+          git push
