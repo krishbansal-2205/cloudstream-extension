@@ -1,10 +1,10 @@
-name: Build and Deploy Extension
+name: Build and Deploy
 
 on:
   push:
     branches:
-      - master
       - main
+      - master
 
 jobs:
   build:
@@ -22,24 +22,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
       - name: Build Plugins
-        run: ./gradlew make
-
-      - name: Prepare deployment folder
         run: |
-          mkdir deploy
-          # Copy the generated JSON manifest (It will be named CNCVerse.json)
-          cp *.json deploy/ || true
-          # Copy all compiled .cs3 plugins while keeping their required folder structure
-          find . -name "*.cs3" -exec cp --parents {} deploy/ \;
+          chmod +x gradlew
+          ./gradlew make
+
+      - name: Prepare Deployment
+        run: |
+          # 1. Create a clean folder for deployment
+          mkdir deploy_folder
+          
+          # 2. Copy the .cs3 files while preserving their exact folder paths
+          find . -type f -name "*.cs3" -exec cp --parents {} deploy_folder/ \;
+          
+          # 3. Grab the JSON manifest from the build folder and place it at the root of our deployment
+          cp build/*.json deploy_folder/CNCVerse.json
 
       - name: Deploy to builds branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy
+          publish_dir: ./deploy_folder
           publish_branch: builds
           force_orphan: true
