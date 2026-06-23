@@ -1,4 +1,4 @@
-﻿package com.cncverse
+package com.cncverse
 
 import android.util.Base64
 import com.lagradost.cloudstream3.*
@@ -23,6 +23,8 @@ import java.nio.charset.StandardCharsets
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.spec.IvParameterSpec
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class HeaderReplacementInterceptor(private val customHeaders: Map<String, String>) : Interceptor {
@@ -174,7 +176,7 @@ private fun String.hexToBase64UrlOrNull(): String? {
         }
     }
 
-  private fun getMpdStream(url: String, customHeaders: Map<String, String>): String {
+  private suspend fun getMpdStream(url: String, customHeaders: Map<String, String>): String = withContext(Dispatchers.IO) {
         val client = OkHttpClient.Builder()
             .addInterceptor(HeaderReplacementInterceptor(customHeaders))
             .build()
@@ -183,12 +185,12 @@ private fun String.hexToBase64UrlOrNull(): String? {
             .url(url)
             .build()
 
-        return client.newCall(request).execute().use { response ->
+        client.newCall(request).execute().use { response ->
           response.body.string()
         }
     }
 
-  private fun getDRMKeysFromLicenseServer(url: String, kid: String): String {
+  private suspend fun getDRMKeysFromLicenseServer(url: String, kid: String): String = withContext(Dispatchers.IO) {
       val userAgent = "Dalvik/2.1.0 (Linux; U; Android)"
         val client = OkHttpClient.Builder()
             .addInterceptor(HeaderReplacementInterceptor(
@@ -210,14 +212,15 @@ private fun String.hexToBase64UrlOrNull(): String? {
             .post(body)
             .build()
 
-        return client.newCall(request).execute().use { response ->
+        client.newCall(request).execute().use { response ->
           // Parse the response to extract the DRM key
-          val response = response.body.string()
-          val jsonResponse = parseJson<Map<String, Any>>(response)
+          val responseBody = response.body.string()
+          val jsonResponse = parseJson<Map<String, Any>>(responseBody)
           @Suppress("UNCHECKED_CAST")
-          val keys = jsonResponse["keys"] as? List<Map<String, String>> ?: return ""
-          val firstKey = keys.firstOrNull() ?: return ""
-          firstKey["k"] ?: ""
+          val keys = jsonResponse["keys"] as? List<Map<String, String>> ?: return@withContext ""
+          // Try to find the key matching the requested KID, fall back to first key
+          val matchedKey = keys.firstOrNull { it["kid"] == kid } ?: keys.firstOrNull()
+          matchedKey?.get("k") ?: ""
         }
     }
 
