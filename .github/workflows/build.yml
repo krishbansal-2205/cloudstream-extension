@@ -28,10 +28,18 @@ jobs:
       - name: Build Plugins
         run: ./gradlew make
 
+      - name: Prepare deployment folder
+        run: |
+          mkdir deploy
+          # Copy the generated JSON manifest (It will be named CNCVerse.json)
+          cp *.json deploy/ || true
+          # Copy all compiled .cs3 plugins while keeping their required folder structure
+          find . -name "*.cs3" -exec cp --parents {} deploy/ \;
+
       - name: Deploy to builds branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./deploy
           publish_branch: builds
           force_orphan: true

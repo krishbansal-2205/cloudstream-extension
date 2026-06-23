@@ -53,8 +53,8 @@ subprojects {
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
     cloudstream {
-        setRepo("https://github.com/NivinCNC/CNCVerse-Cloud-Stream-Extension")
-        authors = listOf("NivinCNC")
+        setRepo("https://github.com/krishbansal-2205/cloudstream-extension")
+        authors = listOf("KrishBansal")
     }
 
     android {
