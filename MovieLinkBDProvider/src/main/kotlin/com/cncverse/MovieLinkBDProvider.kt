@@ -1,5 +1,6 @@
 package com.cncverse
 
+import com.lagradost.cloudstream3.Score
 import com.lagradost.cloudstream3.Episode
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
@@ -289,7 +290,7 @@ class MovieLinkBDProvider : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = fullPlot.takeIf { it.isNotEmpty() }
-                this.rating = rating?.let { (it * 1000).toInt() }
+                this.score = rating?.let { Score.from10(it.toDouble()) }
             }
         }
 
@@ -361,7 +362,7 @@ class MovieLinkBDProvider : MainAPI() {
             this.posterUrl = poster
             this.year = year
             this.plot = fullPlot.takeIf { it.isNotEmpty() }
-            this.rating = rating?.let { (it * 1000).toInt() }
+            this.score = rating?.let { Score.from10(it.toDouble()) }
         }
     }
 
